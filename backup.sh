@@ -47,7 +47,7 @@ backupGhostJsonFile () {
 
     log "Downloading ghost json file"
 
-    echo "$COOKIE" | curl -b - \
+    echo "$COOKIE" | curl -b - --silent \
       -o $export_file \
       -H "Content-Type: application/json" \
       -H "Origin: $GHOST_SERVICE_PROTOCOL$GHOST_SERVICE_NAME" \

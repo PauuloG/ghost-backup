@@ -51,7 +51,7 @@ checkGhostAvailable () {
 }
 
 getCookie () {
-    COOKIE=$(curl -c - "$GHOST_SERVICE_PROTOCOL$GHOST_SERVICE_NAME/ghost/api/v3/admin/session" \
+    COOKIE=$(curl -c - --silent "$GHOST_SERVICE_PROTOCOL$GHOST_SERVICE_NAME/ghost/api/v3/admin/session" \
         --header "Origin: $GHOST_SERVICE_PROTOCOL$GHOST_SERVICE_NAME" \
         --header 'Content-Type: application/json' \
         --data-raw "{
