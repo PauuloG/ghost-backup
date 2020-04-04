@@ -1,6 +1,4 @@
-FROM debian:stretch
-
-MAINTAINER Tim Bennett
+FROM debian:stretch-slim
 
 RUN \
   apt-get update && \
@@ -28,6 +26,7 @@ ENV AUTOMATED_BACKUPS true
 # Ghost files location
 ENV GHOST_LOCATION "/var/lib/ghost"
 
+
 # Prefix to put before all backed up files and archives
 ENV BACKUP_FILE_PREFIX="backup"
 
@@ -37,6 +36,8 @@ ENV MYSQL_SERVICE_NAME="mysql"
 
 # Service port for mysql connections (if applicable)
 ENV MYSQL_SERVICE_PORT=3306
+
+ENV SQLITE_DB_LOCATION="/var/lib/ghost/content/data"
 
 # Name of sqlite database (if applicable)
 ENV SQLITE_DB_NAME="ghost.db"
@@ -48,14 +49,17 @@ ENV CLIENT_SLUG="ghost-backup"
 # available on the network at this address
 ENV GHOST_SERVICE_NAME="ghost"
 
+ENV GHOST_SERVICE_PROTOCOL="http://"
+
 # Service port for ghost connections (if applicable)
 ENV GHOST_SERVICE_PORT="2368"
+
+# API Key for admin access (json dump)
+ENV GHOST_API_ADMIN_KEY="dummy"
 
 # -----------------------
 
 RUN mkdir $BACKUP_LOCATION
-
-VOLUME $BACKUP_LOCATION
 
 # Setup the entrypoint script for initiating the crontab
 COPY entrypoint.sh /entrypoint.sh
@@ -65,6 +69,7 @@ RUN chmod +x /entrypoint.sh
 COPY backup.sh /bin/backup
 COPY restore.sh /bin/restore
 COPY common.sh /bin/common.sh
+COPY token.sh /bin/token.sh
 RUN chmod +x /bin/backup
 RUN chmod +x /bin/restore
 
@@ -72,6 +77,3 @@ RUN chmod +x /bin/restore
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENTRYPOINT ["/entrypoint.sh"]
-
-# Run cron and continually watch the ghost backup log file
-CMD ["sh", "-c", "touch $LOG_LOCATION && cron && tail -F $LOG_LOCATION"]

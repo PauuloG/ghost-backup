@@ -14,15 +14,15 @@ backupDB () {
   if [ $MYSQL_CONTAINER_LINKED = true ]; then
     # mysql/mariadb
 
-    log " creating ghost db archive (mysql)..."
+    log "Creating ghost db archive (mysql)..."
     mysqldump --host=$MYSQL_SERVICE_NAME  --port=$MYSQL_SERVICE_PORT --single-transaction --user=$MYSQL_USER --password=$MYSQL_PASSWORD $MYSQL_DATABASE |
      gzip -c > $export_file
 
   else
     # sqlite
 
-    log " creating ghost db archive (sqlite)..."
-    cd $GHOST_LOCATION/content/data && sqlite3 $SQLITE_DB_NAME ".backup temp.db" && gzip -c temp.db > $export_file && rm temp.db
+    log " Creating ghost db archive (sqlite)..."
+    cd $SQLITE_DB_LOCATION && sqlite3 $SQLITE_DB_NAME ".backup temp.db" && gzip -c temp.db > $export_file && rm temp.db
   fi
 
   log " ...completed: $export_file"
@@ -30,29 +30,33 @@ backupDB () {
 
 # Backup the ghost static files (images, themes, apps etc) but not the /data directory (the db backup handles that)
 backupGhost () {
-  log " creating ghost content files archive..."
+  log "Creating ghost content files archive..."
   export_file="$BACKUP_LOCATION/$BACKUP_FILE_PREFIX-ghost_$NOW.tar.gz"
   #Exclude  /content/data  (we back that up separately), current and versions (Ghost source files from docker image), and content.orig (created when Ghost was built)
   tar cfz $export_file --directory=$GHOST_LOCATION --exclude='content/data' --exclude='content.orig' --exclude='current' --exclude='versions' . 2>&1 | tee -a $LOG_LOCATION
-  log " ...completed: $export_file"
+  log "...completed: $export_file"
 }
 
 # Backup the ghost static files (images, themes, apps etc) but not the /data directory (the db backup handles that)
 backupGhostJsonFile () {
+  checkGhostAvailable
   export_file="$BACKUP_LOCATION/$BACKUP_FILE_PREFIX-ghost_$NOW.json"
 
-  checkGhostAvailable
-
   if [ $GHOST_CONTAINER_LINKED = true ]; then
-    retrieveClientSecret
-    retrieveClientBearerToken
-    log " ...downloading ghost json file..."
-    curl --silent -L -o $export_file http://$GHOST_SERVICE_NAME:$GHOST_SERVICE_PORT/ghost/api/v0.1/db?access_token=$BEARER_TOKEN
-    log " ...completed: $export_file"
-  else
-    log " ...skipping: Your ghost service was not found on the network. Configure GHOST_SERVICE_NAME and GHOST_SERVICE_PORT"
-  fi
+    getCookie
 
+    log "Downloading ghost json file"
+
+    echo "$COOKIE" | curl -b - \
+      -o $export_file \
+      -H "Content-Type: application/json" \
+      -H "Origin: $GHOST_SERVICE_PROTOCOL$GHOST_SERVICE_NAME" \
+      "$GHOST_SERVICE_PROTOCOL$GHOST_SERVICE_NAME:$GHOST_SERVICE_PORT/ghost/api/v3/admin/db/"
+
+    log "...completed: $export_file"
+  else
+    log "...skipping: Your ghost service was not found on the network. Configure GHOST_SERVICE_NAME and GHOST_SERVICE_PORT"
+  fi
 }
 
 # Purge the backups directory so we only keep the most recent backups
